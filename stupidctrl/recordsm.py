@@ -1,29 +1,29 @@
 from transitions import Machine, State
+from remote import ControlManifold
 
 # TODO: Should be singleton
 class RecordSM(Machine):
 
-    ## 
+    ##
     # @brief A record controller state machine.
-    # 
-    # @param recorder Recorder to control
-    # @param ui GUI to update in corespondance with current state.
-    # 
+    #
+    # @param List of remote interfaces to control
+    #
     # @return void
-    def __init__(self, recorder, ui):
-        self.recorder = recorder
-        self.ui = ui
+    def __init__(self, manifold):
+        self.manifold = manifold
+        self.gui = None
 
         # Record controller states
         states = [
-            State(name='disconnected', on_enter=['update_ui']),
-            State(name='connected',  on_enter=['update_ui', 'test_connection']),
-            State(name='ready', on_enter=['update_ui', 'prep_recording']),
-            State(name='started', on_enter=['update_ui', 'start_recording']),
-            State(name='paused', on_enter=['update_ui', 'pause_recording'])
+            State(name='disconnected',  on_enter=['update_ui']),
+            State(name='connected',     on_enter=['update_ui', 'connect_to_servers']),
+            State(name='ready',         on_enter=['update_ui', 'prep_recording']),
+            State(name='started',       on_enter=['update_ui', 'start_recording']),
+            State(name='paused',        on_enter=['update_ui', 'pause_recording'])
         ]
 
-        # Record controller state transition defintion
+        # Record controller state transition definition
         transitions = [
             {'trigger': 'connect',    'source': 'disconnected', 'dest': 'connected'    },
             {'trigger': 'disconnect', 'source': 'connected',    'dest': 'disconnected' },
@@ -40,18 +40,36 @@ class RecordSM(Machine):
                          transitions=transitions,
                          initial='disconnected')
 
+    # TODO: This circular componsition feels very icky. It would be best just
+    # to have a gui.paint() triggered after any click event within the GUI
+    # code.
+    def set_gui(self, gui):
+        self.gui = gui
+
     def update_ui(self):
-        ui.update(self.state)
+        if self.gui:
+            print("Updating UI")
+            self.gui.paint()
+
+    def connect_to_servers(self):
+        print("Connecting to servers.")
+        self.manifold.connect()
+        #pass
+        #rec_ctrl.test_connection()
 
     def test_connection(self):
-        pass
-        #recorder.test_connection()
+        print("Testing connection.")
+        #pass
+        #rec_ctrl.test_connection()
 
     def prep_recording(self):
-        recorder.open_file()
+        print("Preping recording.")
+        self.manifold.makeNewFile()
 
     def start_recording(self):
-        recorder.start()
+        print("Starting recording.")
+        self.manifold.sendStart()
 
     def pause_recording(self):
-        recorder.pause()
+        print("Pausing")
+        self.manifold.sendPause()
