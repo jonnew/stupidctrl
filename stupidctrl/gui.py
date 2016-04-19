@@ -5,8 +5,121 @@ except:
     import Tkinter as tk
     import tkFont as tkf
 
-from connectionbar import ConnectionBar
-from filenamebar import FileNameBar
+class ConnectionBar(tk.Frame):
+
+    ##
+    # @brief
+    #
+    # @param parent
+    # @param default_addr
+    #
+    # @return
+    def __init__(self, parent, remote):
+
+        tk.Frame.__init__(self, parent)
+
+        self.parent = parent
+        self.font = parent.font
+
+        # Remote controller bound to this GUI
+        self.remote = remote
+
+        # The requested address.
+        # No verificaction of sanity at this point
+        self.name = remote.name
+
+        # Is this connection active?
+        self.active = tk.IntVar()
+        
+        # Text entry bar and checkbox
+        self.entry = None
+        self.cbox = None
+
+        self.initUI()
+
+    def initUI(self):
+
+        # Grid config
+        self.columnconfigure(1, weight=1)
+
+        # Label
+        label = tk.Label(self, font=self.font, text=self.name, width=15, anchor=tk.W)
+        label.grid(row=0, column=0, padx=10, sticky=tk.W)
+
+        # Text entry
+        self.entry = tk.Entry(self, font=self.font)
+        self.entry.delete(0, tk.END)
+        self.entry.insert(0, self.remote.req_addr)
+        self.entry.grid(row=0, column=1, sticky=tk.W+tk.E)
+        self.entry.bind('<Leave>', lambda event: self.updateAddr(event))
+
+        self.cbox = tk.Checkbutton(self, text="Active", variable=self.active, command=self.toggleActive)
+        self.cbox.grid(row=0, column=2, sticky=tk.E)
+
+    def updateAddr(self, event):
+
+        txt = event.widget.get()
+        if txt:
+            self.remote.req_addr = txt
+        else:
+            self.remote.req_addr = None
+
+    def toggleActive(self):
+
+        if self.active.get():
+            self.remote.is_active = True
+        else :
+            self.remote.is_active = False
+
+    def disable(self):
+       self.cbox['state'] = 'disable'
+       self.entry['state'] = 'disable'
+
+    def enable(self):
+       self.cbox['state'] = 'normal'
+       self.entry['state'] = 'normal'
+
+class FileNameBar(tk.Frame):
+
+    ## 
+    # @brief A file name entry bar.
+    # 
+    # @param parent Frame to place bar within.
+    # 
+    # @return 
+    def __init__(self, parent):
+
+        tk.Frame.__init__(self, parent)
+        self.parent = parent
+        self.font = parent.font
+        self.filename = None
+        self.initUI()
+
+    def initUI(self):
+
+        # Grid config
+        self.columnconfigure(1, weight=1)
+
+        # Label
+        label = tk.Label(self, font=self.font, text='File name', width=15,
+                anchor=tk.W)
+        label.grid(row=0, column=0, padx=10, sticky=tk.W)
+
+        # Text entry
+        entry = tk.Entry(self, font=self.font)
+        entry.delete(0, tk.END)
+        entry.insert(0, 'file')
+        entry.grid(row=0, column=1, sticky=tk.W+tk.E)
+        entry.bind('<Leave>', lambda event: self.updateFileName(event))
+
+    # Udpate socket address
+    def updateFileName(self, event):
+
+        txt = event.widget.get()
+        if txt:
+            self.filename = txt
+        else:
+            self.filename = None
 
 class GUI(tk.Frame):
 
@@ -17,10 +130,10 @@ class GUI(tk.Frame):
     # enabled controls.
     #
     # @param parent
-    # @param devices Remote control devices to talk with
+    # @param remotes Remote control remotes to talk with
     #
     # @return
-    def __init__(self, parent, devices, sm):
+    def __init__(self, parent, remotes, sm):
         tk.Frame.__init__(self, parent)
 
         self.parent = parent
@@ -30,7 +143,7 @@ class GUI(tk.Frame):
         self.filename = FileNameBar(self)
 
         # The remote interfaces we are interested in controlling
-        self.connections = [ConnectionBar(self, dev) for dev in devices]
+        self.connections = [ConnectionBar(self, r) for r in remotes]
 
         # Recording control rec_btns
         self.rec_btns = {}
@@ -81,11 +194,6 @@ class GUI(tk.Frame):
         ev = {k: v for k, v in self.sm.events.items() if not k.startswith('to_')}
         for t in sorted(ev.keys()):
 
-            #trig = getattr(self.sm, ev[t].name)
-            #def cb():
-            #    trig()
-            #    self.paint()
-
             self.rec_btns[t] = tk.Button(b_frame, text=t, state='disabled', font=self.font,
                     command=getattr(self.sm, ev[t].name))
             self.rec_btns[t].pack(side='left', fill=None, expand=False, padx=10)
@@ -110,3 +218,13 @@ class GUI(tk.Frame):
             for k in v.transitions[state_curr]:
                 self.rec_btns[v.name]['state'] = 'normal'
                 print(v.name)
+
+        # If we are in any state but disconnected, user should not be able to
+        # change remote addr/active states
+        if state_curr is 'disconnected':
+            for c in self.connections:
+                c.enable()
+        else:
+            for c in self.connections:
+                c.disable()
+

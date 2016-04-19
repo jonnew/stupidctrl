@@ -26,6 +26,9 @@ class ConnectionBar(tk.Frame):
         self.req_addr = remote.req_addr
         self.name = remote.name
 
+        # Is this connection active?
+        self.active = tk.IntVar()
+
         self.initUI()
 
     def initUI(self):
@@ -43,6 +46,9 @@ class ConnectionBar(tk.Frame):
         entry.insert(0, self.req_addr)
         entry.grid(row=0, column=1, sticky=tk.W+tk.E)
         entry.bind('<Leave>', lambda event: self.updateAddr(event))
+
+        cbox = tk.Checkbutton(self, text="Active", variable=active)
+        cbox.grid(row=0, column=2, sticky=tk.E)
 
     # Udpate socket address
     def updateAddr(self, event):

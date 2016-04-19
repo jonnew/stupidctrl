@@ -16,17 +16,20 @@ class RecordSM(Machine):
 
         # Record controller states
         states = [
-            State(name='disconnected',  on_enter=['update_ui']),
-            State(name='connected',     on_enter=['update_ui', 'connect_to_servers']),
-            State(name='ready',         on_enter=['update_ui', 'prep_recording']),
-            State(name='started',       on_enter=['update_ui', 'start_recording']),
-            State(name='paused',        on_enter=['update_ui', 'pause_recording'])
+            State(name='disconnected',  on_enter=['updateUI']),
+            State(name='connected',     on_enter=['updateUI']),
+            State(name='confirmed',     on_enter=['updateUI']),
+            State(name='ready',         on_enter=['updateUI', 'prepRecording']),
+            State(name='started',       on_enter=['updateUI', 'startRecording']),
+            State(name='paused',        on_enter=['updateUI', 'pauseRecording'])
         ]
 
         # Record controller state transition definition
         transitions = [
-            {'trigger': 'connect',    'source': 'disconnected', 'dest': 'connected'    },
+            {'trigger': 'connect',    'source': 'disconnected', 'dest': 'connected'    , 'prepare': ['connectToServers', 'pingServers'], 'conditions': 'connection_confirmed'},
+            #{'trigger': 'ping',       'source': 'connected',    'dest': 'confirmed'    , 'prepare': 'pingServers', 'conditions': 'connection_confirmed'}, 
             {'trigger': 'disconnect', 'source': 'connected',    'dest': 'disconnected' },
+            #{'trigger': 'disconnect', 'source': 'confirmed',    'dest': 'disconnected' },
             {'trigger': 'disconnect', 'source': 'paused',       'dest': 'disconnected' },
             {'trigger': 'new',        'source': 'connected',    'dest': 'ready'        },
             {'trigger': 'new',        'source': 'paused',       'dest': 'ready'        },
@@ -40,36 +43,37 @@ class RecordSM(Machine):
                          transitions=transitions,
                          initial='disconnected')
 
-    # TODO: This circular componsition feels very icky. It would be best just
+    # TODO: This circular composition feels very icky. It would be best just
     # to have a gui.paint() triggered after any click event within the GUI
     # code.
     def set_gui(self, gui):
         self.gui = gui
 
-    def update_ui(self):
+    def updateUI(self):
         if self.gui:
-            print("Updating UI")
             self.gui.paint()
 
-    def connect_to_servers(self):
+    def connectToServers(self):
         print("Connecting to servers.")
+        self.manifold.filterRemotes()
         self.manifold.connect()
-        #pass
-        #rec_ctrl.test_connection()
 
-    def test_connection(self):
-        print("Testing connection.")
-        #pass
-        #rec_ctrl.test_connection()
+    def connection_confirmed(self): 
+        return self.manifold.connection_confirmed
 
-    def prep_recording(self):
-        print("Preping recording.")
+    def pingServers(self):
+        print("Testing connections.")
+        self.manifold.ping()
+        print("Connection confirmed: " + str(self.connection_confirmed()))
+
+    def prepRecording(self):
+        print("Preparing recording.")
         self.manifold.makeNewFile()
 
-    def start_recording(self):
+    def startRecording(self):
         print("Starting recording.")
         self.manifold.sendStart()
 
-    def pause_recording(self):
+    def pauseRecording(self):
         print("Pausing")
         self.manifold.sendPause()
