@@ -228,3 +228,10 @@ class GUI(tk.Frame):
             for c in self.connections:
                 c.disable()
 
+    def busy(self):
+        self.parent.config(cursor='watch')
+        self.parent.update()
+
+    def unbusy(self):
+        self.parent.config(cursor='')
+        self.parent.update()

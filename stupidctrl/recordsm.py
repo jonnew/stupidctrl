@@ -1,5 +1,5 @@
 from transitions import Machine, State
-from remote import ControlManifold
+from .remote import ControlManifold
 
 # TODO: Should be singleton
 class RecordSM(Machine):
@@ -16,25 +16,23 @@ class RecordSM(Machine):
 
         # Record controller states
         states = [
-            State(name='disconnected',  on_enter=['updateUI']),
-            State(name='connected',     on_enter=['updateUI']),
-            State(name='confirmed',     on_enter=['updateUI']),
-            State(name='ready',         on_enter=['updateUI', 'prepRecording']),
-            State(name='started',       on_enter=['updateUI', 'startRecording']),
-            State(name='paused',        on_enter=['updateUI', 'pauseRecording'])
+            State(name='disconnected',  on_enter=['unbusyUI', 'updateUI']),
+            State(name='connected',     on_enter=['unbusyUI', 'updateUI']),
+            State(name='confirmed',     on_enter=['unbusyUI', 'updateUI']),
+            State(name='ready',         on_enter=['unbusyUI', 'updateUI', 'prepRecording']),
+            State(name='started',       on_enter=['unbusyUI', 'updateUI', 'startRecording']),
+            State(name='paused',        on_enter=['unbusyUI', 'updateUI', 'pauseRecording'])
         ]
 
         # Record controller state transition definition
         transitions = [
-            {'trigger': 'connect',    'source': 'disconnected', 'dest': 'connected'    , 'prepare': ['connectToServers', 'pingServers'], 'conditions': 'connection_confirmed'},
-            #{'trigger': 'ping',       'source': 'connected',    'dest': 'confirmed'    , 'prepare': 'pingServers', 'conditions': 'connection_confirmed'}, 
-            {'trigger': 'disconnect', 'source': 'connected',    'dest': 'disconnected' },
-            #{'trigger': 'disconnect', 'source': 'confirmed',    'dest': 'disconnected' },
-            {'trigger': 'disconnect', 'source': 'paused',       'dest': 'disconnected' },
-            {'trigger': 'new',        'source': 'connected',    'dest': 'ready'        },
-            {'trigger': 'new',        'source': 'paused',       'dest': 'ready'        },
-            {'trigger': 'start',      'source': 'ready',        'dest': 'started'      },
-            {'trigger': 'pause',      'source': 'started',      'dest': 'paused'       },
+            {'trigger': 'connect',    'source': 'disconnected', 'dest': 'connected'    , 'prepare': ['busyUI', 'connectToServers', 'pingServers'], 'conditions': 'connection_confirmed'},
+            {'trigger': 'disconnect', 'source': 'connected',    'dest': 'disconnected' , 'prepare': ['busyUI'] },
+            {'trigger': 'disconnect', 'source': 'paused',       'dest': 'disconnected' , 'prepare': ['busyUI'] },
+            {'trigger': 'new',        'source': 'connected',    'dest': 'ready'        , 'prepare': ['busyUI'] },
+            {'trigger': 'new',        'source': 'paused',       'dest': 'ready'        , 'prepare': ['busyUI'] },
+            {'trigger': 'start',      'source': 'ready',        'dest': 'started'      , 'prepare': ['busyUI'] },
+            {'trigger': 'pause',      'source': 'started',      'dest': 'paused'       , 'prepare': ['busyUI'] },
         ]
 
         # Record machine
@@ -53,12 +51,21 @@ class RecordSM(Machine):
         if self.gui:
             self.gui.paint()
 
+    def busyUI(self):
+        if self.gui:
+            self.gui.busy()
+
+    def unbusyUI(self):
+        if self.gui:
+            self.gui.unbusy()
+
     def connectToServers(self):
         print("Connecting to servers.")
         self.manifold.filterRemotes()
         self.manifold.connect()
 
     def connection_confirmed(self): 
+        self.unbusyUI()
         return self.manifold.connection_confirmed
 
     def pingServers(self):

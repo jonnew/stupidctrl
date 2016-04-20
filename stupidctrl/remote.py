@@ -33,6 +33,7 @@ class ControlManifold(object):
         # If there are no active remotes, we cannot test their connections
         if not self.active_remotes:
             self.connection_confirmed = False
+            return
 
         self.connection_confirmed = True
         for r in self.active_remotes:
@@ -92,9 +93,9 @@ class RemoteInterface(object):
         self.ping_cmd = ping_cmd
         self.req_addr = addr
         self.conn_addr = None
-        self.retries = 1000 #3
+        self.retries = 3
         self.retries_left = self.retries
-        self.request_timeout = 1000 # msec
+        self.request_timeout = 500 # msec
 
     def __enter__(self):
         return self

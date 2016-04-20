@@ -13,9 +13,9 @@ except:
     import Tkinter as tk
     import tkFont as tkf
 
-from remote import RemoteInterface, ControlManifold
-from gui import GUI
-from recordsm import RecordSM
+from .remote import RemoteInterface, ControlManifold
+from .gui import GUI
+from .recordsm import RecordSM
 import signal
 import sys
 
@@ -30,15 +30,15 @@ def main():
 
     # Define a set of interfaces to control
     # TODO: newline character needed? I think it should be the servers'
-    # responsibility to strip newlines 
-    # TODO: **kwargs to make these named instead of positional 
+    # responsibility to strip newlines
+    # TODO: **kwargs to make these named instead of positional
     remotes = [
         RemoteInterface('Open Ephys', 'tcp://localhost:5556', '', 'StartRecord', 'StopRecord', 'NewFile','', ''),
         RemoteInterface('Oat', 'tcp://localhost:6666', 'help\n', 'start\n', 'pause\n', 'new\n', 'quit\n', 'ping\n'),
         RemoteInterface('Maze', 'tcp://localhost:6665', 'help', 'start', 'pause', 'new', 'exit', ''),
         RemoteInterface('Stim', 'tcp://localhost:6000', '', 'start', 'pause', 'new', 'quit', '')
     ]
-    
+
     # Wrap remote interfaces
     manifold = ControlManifold(remotes)
 
@@ -49,7 +49,7 @@ def main():
     root.title('Stupid Controller')
     root.font = tkf.Font(family='Helvetica', size=12)
     gui = GUI(root, remotes, sm)
-    sm.set_gui(gui) # Eww...
+    sm.set_gui(gui) # TODO: Eww...
     root.mainloop()
 
 if __name__ == '__main__':
